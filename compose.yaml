@@ -32,7 +32,15 @@ services:
     image: grafana/loki:3.7.10
     container_name: loki
     restart: unless-stopped
-    command: -config.file=/etc/loki/config.yaml
+    # expand-env makes Loki replace ${VAR:-default} in loki/config.yaml from the environment below.
+    command: -config.file=/etc/loki/config.yaml -config.expand-env=true
+    environment:
+      # Forwarded from .env; empty means "use the default written in loki/config.yaml".
+      LOKI_RETENTION: ${LOKI_RETENTION:-}
+      LOKI_REJECT_OLD_SAMPLES_MAX_AGE: ${LOKI_REJECT_OLD_SAMPLES_MAX_AGE:-}
+      LOKI_INGESTION_RATE_MB: ${LOKI_INGESTION_RATE_MB:-}
+      LOKI_INGESTION_BURST_MB: ${LOKI_INGESTION_BURST_MB:-}
+      LOKI_PER_STREAM_RATE_LIMIT: ${LOKI_PER_STREAM_RATE_LIMIT:-}
     # No `ports:` on purpose: reachable only on the compose network (Grafana, and the gateway).
     volumes:
       - ./loki/config.yaml:/etc/loki/config.yaml:ro

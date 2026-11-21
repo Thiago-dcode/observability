@@ -51,6 +51,26 @@ Grafana (Explore), or from inside the network:
 docker run --rm --network observability_loki curlimages/curl -s http://loki:3100/ready
 ```
 
+## Settings (`.env`)
+
+Compose reads `.env` for `compose.yaml` only. Loki settings reach `loki/config.yaml` because Loki
+runs with `-config.expand-env=true` and compose forwards the variables into the container. The
+defaults live in `loki/config.yaml` (`${VAR:-default}`); an empty or missing `.env` line uses them.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `GRAFANA_ADMIN_PASSWORD` | none, required | First-run Grafana admin password; Compose refuses to start without it |
+| `INGEST_BIND` | `127.0.0.1` | Host address of the ingest port. VPS: `10.8.0.4` |
+| `UI_BIND` | `127.0.0.1` | Host address of the Grafana UI. Keep it |
+| `LOKI_RETENTION` | `720h` (30 d) | How long logs are kept; size it to the disk |
+| `LOKI_REJECT_OLD_SAMPLES_MAX_AGE` | `168h` (7 d) | Refuse lines older than this at write time |
+| `LOKI_INGESTION_RATE_MB` | `4` | MB/s accepted |
+| `LOKI_INGESTION_BURST_MB` | `6` | Allowed burst, MB |
+| `LOKI_PER_STREAM_RATE_LIMIT` | `3MB` | Per-stream rate per second |
+
+Apply a change with `docker compose up -d` (recreates Loki). Image versions stay pinned in
+`compose.yaml` on purpose. A literal `$` in `loki/config.yaml` must be written `$$`.
+
 ## Configuration
 
 - `loki/config.yaml`: the image's stock config plus 30-day retention (`compactor.retention_enabled`),

@@ -1,3 +1,6 @@
+# Loki runs with -config.expand-env=true (see compose.yaml), so ${VAR:-default} is replaced from the
+# container's environment. The defaults live here, in one place; .env only overrides them.
+# A literal "$" in this file would be expanded too: write "$$" for one.
 auth_enabled: false
 server:
   http_listen_port: 3100
@@ -22,9 +25,12 @@ schema_config:
         prefix: index_
         period: 24h
 limits_config:
-  retention_period: 720h            # 30 days, then Loki deletes old data
+  retention_period: ${LOKI_RETENTION:-720h}                          # 30 days, then Loki deletes old data
   reject_old_samples: true
-  reject_old_samples_max_age: 168h
+  reject_old_samples_max_age: ${LOKI_REJECT_OLD_SAMPLES_MAX_AGE:-168h}   # refuse lines older than 7 days
+  ingestion_rate_mb: ${LOKI_INGESTION_RATE_MB:-4}                    # MB/s accepted per tenant
+  ingestion_burst_size_mb: ${LOKI_INGESTION_BURST_MB:-6}
+  per_stream_rate_limit: ${LOKI_PER_STREAM_RATE_LIMIT:-3MB}          # per stream, per second
 compactor:
   working_directory: /loki/compactor
   retention_enabled: true           # nothing is deleted without this
