@@ -7,14 +7,15 @@ Everything goes through one nginx container, `gateway`. Loki and Grafana publish
 
 | | Local PC | VPS |
 |---|---|---|
-| `LOKI_BIND` | `127.0.0.1` | `10.8.0.4` (WireGuard address) |
+| `INGEST_BIND` | `127.0.0.1` | `10.8.0.4` (WireGuard address) |
+| `UI_BIND` | `127.0.0.1` | `127.0.0.1` (keep it: never on the tunnel) |
 | Ingest listener (`:3100` -> Loki) | `localhost:3100` | `10.8.0.4:3100`, reachable only through the tunnel |
 | Grafana UI listener (`:3000` -> Grafana) | `localhost:3001` | `127.0.0.1:3001` on the VPS, via `ssh -L 3001:127.0.0.1:3001 obs-vps` |
 
 ## Run
 
 ```bash
-cp .env.example .env        # set GRAFANA_ADMIN_PASSWORD (and LOKI_BIND on the VPS)
+cp .env.example .env        # set GRAFANA_ADMIN_PASSWORD (and INGEST_BIND on the VPS)
 docker compose up -d
 curl localhost:3100/ready   # "ready" after ~15 s
 ```
@@ -33,11 +34,12 @@ sudo chown -R 472:472 data/grafana
 `gateway` (nginx, `nginx/default.conf`) is the only container that publishes ports, one listener per
 purpose:
 
-- **Ingest `:3100`** -> Loki, bound to `LOKI_BIND`. Allows just `POST /loki/api/v1/push` (what Alloy
+- **Ingest `:3100`** -> Loki, published on `INGEST_BIND`. Allows just `POST /loki/api/v1/push` (what Alloy
   sends) and `GET /ready`; everything else returns 403, so a compromised peer can add log lines but
   cannot query, delete or read config.
-- **UI `:3000`** -> Grafana, published on `127.0.0.1:3001` only. Never on the tunnel address, so a
-  compromised peer cannot even reach the login page. On the VPS you reach it with `ssh -L`.
+- **UI `:3000`** -> Grafana, published on `UI_BIND:3001` (default `127.0.0.1`). Never set it to the
+  tunnel address, so a compromised peer cannot even reach the login page. On the VPS you reach it
+  with `ssh -L`.
 
 Grafana queries Loki directly over the compose network, not through the gateway. To add a service,
 give it a listener in `nginx/default.conf` and a `ports:` entry on `gateway`, never on the service.
